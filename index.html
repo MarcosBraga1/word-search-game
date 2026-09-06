@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Caça-Palavras Moderno | Jogo Online Grátis</title>
+  <meta name="description" content="Jogo de Caça-Palavras responsivo e interativo em JavaScript nativo. Desafie sua mente encontrando palavras em uma grade 20x20!">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-gradient: radial-gradient(circle at top center, #1e1b4b 0%, #0f172a 100%);
+      --panel-bg: rgba(30, 41, 59, 0.7);
+      --panel-border: rgba(255, 255, 255, 0.1);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --accent-glow: rgba(99, 102, 241, 0.4);
+      --grid-bg: rgba(15, 23, 42, 0.85);
+      --cell-bg: rgba(255, 255, 255, 0.05);
+      --cell-hover: rgba(99, 102, 241, 0.25);
+      --cell-selecting: #6366f1;
+      --success: #10b981;
+      --shadow-lg: 0 20px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 16px;
+      touch-action: manipulation;
+      overflow-x: hidden;
+    }
+
+    /* Canvas de Confetes */
+    #confetti-canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 100;
+    }
+
+    /* Container Principal */
+    .app-container {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Cabeçalho */
+    header {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-lg);
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 22px;
+      color: #fff;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(to right, #ffffff, #cbd5e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .stat-badge {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--panel-border);
+      padding: 8px 16px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+
+    .stat-badge .icon {
+      font-size: 1.1rem;
+    }
+
+    .stat-value {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px var(--accent-glow);
+    }
+
+    .btn:hover {
+      background: var(--accent-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    /* Layout da Área Principal */
+    .game-content {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 24px;
+      align-items: start;
+    }
+
+    /* Painel do Caça-Palavras */
+    .grid-wrapper {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 16px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .word-search-grid {
+      display: grid;
+      grid-template-columns: repeat(20, 1fr);
+      grid-template-rows: repeat(20, 1fr);
+      gap: 3px;
+      width: 100%;
+      max-width: 660px;
+      aspect-ratio: 1 / 1;
+      background: var(--grid-bg);
+      padding: 8px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      touch-action: none; /* Crucial para evitar rolagem durante o arrasto no mobile */
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    /* Células */
+    .cell {
+      background: var(--cell-bg);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(9px, 2.3vmin, 16px);
+      font-weight: 800;
+      color: #e2e8f0;
+      cursor: pointer;
+      user-select: none;
+      -webkit-user-select: none;
+      transition: background 0.1s ease, transform 0.1s ease;
+      aspect-ratio: 1 / 1;
+    }
+
+    .cell:hover {
+      background: var(--cell-hover);
+    }
+
+    .cell.selecting {
+      background: var(--cell-selecting) !important;
+      color: #ffffff !important;
+      box-shadow: 0 0 12px var(--accent-glow);
+      transform: scale(1.08);
+      z-index: 2;
+    }
+
+    /* Cores de Destaque para Palavras Encontradas */
+    .cell.found-color-0 { background: #10b981; color: #fff; box-shadow: 0 0 8px rgba(16, 185, 129, 0.5); }
+    .cell.found-color-1 { background: #ec4899; color: #fff; box-shadow: 0 0 8px rgba(236, 72, 153, 0.5); }
+    .cell.found-color-2 { background: #06b6d4; color: #fff; box-shadow: 0 0 8px rgba(6, 182, 212, 0.5); }
+    .cell.found-color-3 { background: #f59e0b; color: #fff; box-shadow: 0 0 8px rgba(245, 158, 11, 0.5); }
+    .cell.found-color-4 { background: #a855f7; color: #fff; box-shadow: 0 0 8px rgba(168, 85, 247, 0.5); }
+    .cell.found-color-5 { background: #f97316; color: #fff; box-shadow: 0 0 8px rgba(249, 115, 22, 0.5); }
+    .cell.found-color-6 { background: #3b82f6; color: #fff; box-shadow: 0 0 8px rgba(59, 130, 246, 0.5); }
+    .cell.found-color-7 { background: #14b8a6; color: #fff; box-shadow: 0 0 8px rgba(20, 184, 166, 0.5); }
+    .cell.found-color-8 { background: #f43f5e; color: #fff; box-shadow: 0 0 8px rgba(244, 63, 94, 0.5); }
+    .cell.found-color-9 { background: #8b5cf6; color: #fff; box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); }
+    .cell.found-color-10 { background: #84cc16; color: #fff; box-shadow: 0 0 8px rgba(132, 204, 22, 0.5); }
+    .cell.found-color-11 { background: #d946ef; color: #fff; box-shadow: 0 0 8px rgba(217, 70, 239, 0.5); }
+
+    /* Animation ao Encontrar Palavra */
+    @keyframes wordFoundPop {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.25); z-index: 5; }
+      100% { transform: scale(1); }
+    }
+
+    .cell.pop-anim {
+      animation: wordFoundPop 0.35s ease-in-out;
+    }
+
+    /* Painel Lateral - Lista de Palavras */
+    .sidebar {
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--panel-border);
+      border-radius: 20px;
+      padding: 20px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 12px;
+    }
+
+    .sidebar-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .word-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      list-style: none;
+    }
+
+    .word-item {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: #cbd5e1;
+      padding: 8px 14px;
+      border-radius: 12px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.25s ease;
+    }
+
+    .word-item.found {
+      background: rgba(16, 185, 129, 0.15);
+      border-color: rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      text-decoration: line-through;
+      opacity: 0.85;
+      transform: scale(0.98);
+    }
+
+    .word-item .check-icon {
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .word-item.found .check-icon {
+      display: inline-block;
+    }
+
+    /* Modal de Vitória */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 90;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal-card {
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid var(--panel-border);
+      border-radius: 24px;
+      padding: 36px 28px;
+      width: 100%;
+      max-width: 440px;
+      text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .modal-overlay.active .modal-card {
+      transform: scale(1);
+    }
+
+    .trophy-badge {
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, #f59e0b, #ec4899);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 10px 25px rgba(245, 158, 11, 0.4);
+      margin-bottom: 4px;
+    }
+
+    .modal-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    .modal-subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .modal-stats {
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid var(--panel-border);
+      border-radius: 16px;
+      padding: 16px;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      margin: 8px 0;
+    }
+
+    .modal-stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .modal-stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .modal-stat-val {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    /* Responsividade */
+    @media (max-width: 900px) {
+      .game-content {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        order: 2;
+      }
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+
+      header {
+        padding: 12px 16px;
+      }
+
+      h1 {
+        font-size: 1.2rem;
+      }
+
+      .grid-wrapper {
+        padding: 8px;
+      }
+
+      .word-search-grid {
+        gap: 2px;
+        padding: 4px;
+      }
+
+      .cell {
+        font-size: clamp(8px, 3.2vw, 14px);
+        border-radius: 3px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Canvas para Animação de Confetes ao Vencer -->
+  <canvas id="confetti-canvas"></canvas>
+
+  <div class="app-container">
+    <!-- Cabeçalho -->
+    <header>
+      <div class="brand">
+        <div class="brand-icon">CP</div>
+        <div>
+          <h1>Caça-Palavras</h1>
+          <p style="font-size: 0.8rem; color: var(--text-muted);">Encontre todas as palavras ocultas!</p>
+        </div>
+      </div>
+
+      <div class="stats-bar">
+        <div class="stat-badge" title="Tempo decorrido">
+          <span class="icon">⏱️</span>
+          <span id="timer-display" class="stat-value">00:00</span>
+        </div>
+
+        <div class="stat-badge" title="Palavras encontradas">
+          <span class="icon">🧩</span>
+          <span id="found-counter" class="stat-value">0/0</span>
+        </div>
+
+        <button id="btn-restart" class="btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.5 2v6h-6M2.5 22v-6h6"/><path d="M2 11.5a10 10 0 0 1 18.8-4.3L21.5 8M22 12.5a10 10 0 0 1-18.8 4.2L2.5 16"/></svg>
+          Reiniciar
+        </button>
+      </div>
+    </header>
+
+    <!-- Área Principal do Jogo -->
+    <main class="game-content">
+      <!-- Caça Palavras -->
+      <section class="grid-wrapper">
+        <div id="grid" class="word-search-grid"></div>
+      </section>
+
+      <!-- Lista Lateral de Palavras -->
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <div class="sidebar-title">
+            <span>📋</span> Palavras Ocultas
+          </div>
+        </div>
+        <ul id="word-list" class="word-list"></ul>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Modal de Vitória -->
+  <div id="victory-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="trophy-badge">🏆</div>
+      <h2 class="modal-title">Parabéns!</h2>
+      <p class="modal-subtitle">Você encontrou todas as palavras da partida!</p>
+
+      <div class="modal-stats">
+        <div class="modal-stat-item">
+          <span class="modal-stat-label">Tempo Total</span>
+          <span id="final-time" class="modal-stat-val">00:00</span>
+        </div>
+        <div class="modal-stat-item">
+          <span class="modal-stat-label">Palavras</span>
+          <span id="final-count" class="modal-stat-val">0/0</span>
+        </div>
+      </div>
+
+      <button id="btn-modal-restart" class="btn" style="width: 100%; justify-content: center; padding: 14px;">
+        Jogar Novamente
+      </button>
+    </div>
+  </div>
+
+  <!-- Lógica do Jogo (Vanilla JS) -->
+  <script>
+    (function () {
+      // Banco Variado de Palavras em Português (Sem acentos ou caracteres especiais)
+      const WORD_BANK = [
+        'ALGORITMO', 'COMPUTADOR', 'DESENVOLVEDOR', 'INTERNET', 'PROGRAMACAO',
+        'JAVASCRIPT', 'SOFTWARE', 'HARDWARE', 'SISTEMA', 'MEMORIA',
+        'PROCESSADOR', 'APLICATIVO', 'SEGURANCA', 'NUVEM', 'TECNOLOGIA',
+        'DATABASE', 'NAVEGADOR', 'REQUISICAO', 'VARIAVEL', 'FUNCAO',
+        'ESTRUTURA', 'MATRIZ', 'OBJETO', 'BIBLIOTECA', 'ENGRENAGEM',
+        'SOLUCAO', 'DISPOSITIVO', 'INTELIGENCIA', 'TECLADO', 'MONITOR',
+        'SERVIDOR', 'DIGITAL', 'GRAFICO', 'LOGICA', 'COMANDO',
+        'INTERFACE', 'CONEXAO', 'ARQUITETURA', 'AUTOMACAO', 'CONTEUDO'
+      ];
+
+      const GRID_SIZE = 20;
+
+      // 8 Direções Possíveis: Horizontal, Vertical e Diagonais (Normais e Invertidas)
+      const DIRECTIONS = [
+        { dr: 0, dc: 1 },   // Horizontal Direita
+        { dr: 0, dc: -1 },  // Horizontal Esquerda
+        { dr: 1, dc: 0 },   // Vertical Baixo
+        { dr: -1, dc: 0 },  // Vertical Cima
+        { dr: 1, dc: 1 },   // Diagonal Baixo-Direita
+        { dr: 1, dc: -1 },  // Diagonal Baixo-Esquerda
+        { dr: -1, dc: 1 },  // Diagonal Cima-Direita
+        { dr: -1, dc: -1 }  // Diagonal Cima-Esquerda
+      ];
+
+      // Estado do Jogo
+      let board = [];
+      let activeWords = []; // Array de Objetos: { text, found, colorIndex, cells: [{r, c}] }
+      let foundCount = 0;
+      let timerInterval = null;
+      let secondsElapsed = 0;
+      let isSelecting = false;
+      let startCellPos = null;
+      let currentSelectionPath = [];
+
+      // Elementos do DOM
+      const gridEl = document.getElementById('grid');
+      const wordListEl = document.getElementById('word-list');
+      const timerDisplayEl = document.getElementById('timer-display');
+      const foundCounterEl = document.getElementById('found-counter');
+      const btnRestartEl = document.getElementById('btn-restart');
+      const victoryModalEl = document.getElementById('victory-modal');
+      const finalTimeEl = document.getElementById('final-time');
+      const finalCountEl = document.getElementById('final-count');
+      const btnModalRestartEl = document.getElementById('btn-modal-restart');
+
+      // Helper: Embaralhar Array (Fisher-Yates)
+      function shuffle(array) {
+        const arr = [...array];
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      // Algoritmo de Geração da Grade
+      function generateBoard() {
+        let attempts = 0;
+        let success = false;
+
+        while (!success && attempts < 50) {
+          attempts++;
+          board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+          activeWords = [];
+
+          // Sortear entre 8 e 12 palavras
+          const numWordsToPick = Math.floor(Math.random() * 5) + 8; // 8 a 12
+          const selectedTexts = shuffle(WORD_BANK).slice(0, numWordsToPick);
+
+          // Ordenar por tamanho decrescente para facilitar o encaixe
+          selectedTexts.sort((a, b) => b.length - a.length);
+
+          let placedAll = true;
+
+          for (let index = 0; index < selectedTexts.length; index++) {
+            const word = selectedTexts[index];
+            const placedInfo = tryPlaceWord(board, word);
+
+            if (placedInfo) {
+              activeWords.push({
+                text: word,
+                found: false,
+                colorIndex: index % 12,
+                cells: placedInfo
+              });
+            } else {
+              placedAll = false;
+              break;
+            }
+          }
+
+          if (placedAll && activeWords.length >= 8) {
+            success = true;
+          }
+        }
+
+        // Preencher células restantes com letras aleatórias de A a Z
+        fillEmptyCells(board);
+      }
+
+      // Tenta posicionar uma palavra na grade
+      function tryPlaceWord(grid, word) {
+        const dirs = shuffle(DIRECTIONS);
+        const positions = [];
+
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            positions.push({ r, c });
+          }
+        }
+        const shuffledPositions = shuffle(positions);
+
+        for (const dir of dirs) {
+          for (const pos of shuffledPositions) {
+            if (canPlaceWord(grid, word, pos.r, pos.c, dir.dr, dir.dc)) {
+              return placeWord(grid, word, pos.r, pos.c, dir.dr, dir.dc);
+            }
+          }
+        }
+        return null;
+      }
+
+      function canPlaceWord(grid, word, startR, startC, dr, dc) {
+        const endR = startR + dr * (word.length - 1);
+        const endC = startC + dc * (word.length - 1);
+
+        if (endR < 0 || endR >= GRID_SIZE || endC < 0 || endC >= GRID_SIZE) {
+          return false;
+        }
+
+        for (let i = 0; i < word.length; i++) {
+          const r = startR + dr * i;
+          const c = startC + dc * i;
+          const cell = grid[r][c];
+
+          if (cell !== null && cell !== word[i]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function placeWord(grid, word, startR, startC, dr, dc) {
+        const placedCells = [];
+        for (let i = 0; i < word.length; i++) {
+          const r = startR + dr * i;
+          const c = startC + dc * i;
+          grid[r][c] = word[i];
+          placedCells.push({ r, c });
+        }
+        return placedCells;
+      }
+
+      function fillEmptyCells(grid) {
+        const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            if (grid[r][c] === null) {
+              grid[r][c] = alphabet[Math.floor(Math.random() * alphabet.length)];
+            }
+          }
+        }
+      }
+
+      // Renderização do DOM
+      function renderGrid() {
+        gridEl.innerHTML = '';
+        for (let r = 0; r < GRID_SIZE; r++) {
+          for (let c = 0; c < GRID_SIZE; c++) {
+            const cellDiv = document.createElement('div');
+            cellDiv.className = 'cell';
+            cellDiv.dataset.r = r;
+            cellDiv.dataset.c = c;
+            cellDiv.textContent = board[r][c];
+            gridEl.appendChild(cellDiv);
+          }
+        }
+      }
+
+      function renderWordList() {
+        wordListEl.innerHTML = '';
+        activeWords.forEach((item) => {
+          const li = document.createElement('li');
+          li.className = `word-item ${item.found ? 'found' : ''}`;
+          li.dataset.word = item.text;
+          li.innerHTML = `
+            <span>${item.text}</span>
+            <span class="check-icon">✓</span>
+          `;
+          wordListEl.appendChild(li);
+        });
+        updateCounter();
+      }
+
+      function updateCounter() {
+        foundCounterEl.textContent = `${foundCount}/${activeWords.length}`;
+      }
+
+      // Cronômetro
+      function startTimer() {
+        stopTimer();
+        secondsElapsed = 0;
+        updateTimerDisplay();
+        timerInterval = setInterval(() => {
+          secondsElapsed++;
+          updateTimerDisplay();
+        }, 1000);
+      }
+
+      function stopTimer() {
+        if (timerInterval) {
+          clearInterval(timerInterval);
+          timerInterval = null;
+        }
+      }
+
+      function updateTimerDisplay() {
+        const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+        const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+        timerDisplayEl.textContent = `${mins}:${secs}`;
+      }
+
+      // Mecânica de Seleção por Pointer Events
+      function getCellFromPoint(x, y) {
+        const el = document.elementFromPoint(x, y);
+        if (el && el.classList.contains('cell')) {
+          return {
+            r: parseInt(el.dataset.r, 10),
+            c: parseInt(el.dataset.c, 10)
+          };
+        }
+        return null;
+      }
+
+      function calculateStraightLinePath(start, target) {
+        const dr = target.r - start.r;
+        const dc = target.c - start.c;
+
+        if (dr === 0 && dc === 0) {
+          return [start];
+        }
+
+        const isHorizontal = dr === 0;
+        const isVertical = dc === 0;
+        const isDiagonal = Math.abs(dr) === Math.abs(dc);
+
+        if (!isHorizontal && !isVertical && !isDiagonal) {
+          return null;
+        }
+
+        const steps = Math.max(Math.abs(dr), Math.abs(dc));
+        const stepR = dr === 0 ? 0 : Math.sign(dr);
+        const stepC = dc === 0 ? 0 : Math.sign(dc);
+
+        const path = [];
+        for (let i = 0; i <= steps; i++) {
+          path.push({
+            r: start.r + stepR * i,
+            c: start.c + stepC * i
+          });
+        }
+        return path;
+      }
+
+      function clearSelectionHighlight() {
+        document.querySelectorAll('.cell.selecting').forEach((cell) => {
+          cell.classList.remove('selecting');
+        });
+      }
+
+      function highlightPath(path) {
+        clearSelectionHighlight();
+        if (!path) return;
+        path.forEach((pos) => {
+          const cellEl = gridEl.children[pos.r * GRID_SIZE + pos.c];
+          if (cellEl) cellEl.classList.add('selecting');
+        });
+      }
+
+      function handlePointerDown(e) {
+        const pos = getCellFromPoint(e.clientX, e.clientY);
+        if (!pos) return;
+
+        isSelecting = true;
+        startCellPos = pos;
+        currentSelectionPath = [pos];
+        highlightPath(currentSelectionPath);
+      }
+
+      function handlePointerMove(e) {
+        if (!isSelecting || !startCellPos) return;
+
+        const pos = getCellFromPoint(e.clientX, e.clientY);
+        if (!pos) return;
+
+        const linePath = calculateStraightLinePath(startCellPos, pos);
+        if (linePath) {
+          currentSelectionPath = linePath;
+          highlightPath(currentSelectionPath);
+        }
+      }
+
+      function handlePointerUp() {
+        if (!isSelecting) return;
+        isSelecting = false;
+
+        if (currentSelectionPath && currentSelectionPath.length > 0) {
+          checkSelectedWord(currentSelectionPath);
+        }
+
+        clearSelectionHighlight();
+        startCellPos = null;
+        currentSelectionPath = [];
+      }
+
+      function checkSelectedWord(path) {
+        const forwardStr = path.map(p => board[p.r][p.c]).join('');
+        const reverseStr = forwardStr.split('').reverse().join('');
+
+        const matchedWord = activeWords.find(
+          item => !item.found && (item.text === forwardStr || item.text === reverseStr)
+        );
+
+        if (matchedWord) {
+          matchedWord.found = true;
+          foundCount++;
+
+          // Aplicar classe de destaque permanente em cada célula
+          path.forEach(p => {
+            const cellEl = gridEl.children[p.r * GRID_SIZE + p.c];
+            cellEl.classList.add(`found-color-${matchedWord.colorIndex}`);
+            cellEl.classList.add('pop-anim');
+            setTimeout(() => cellEl.classList.remove('pop-anim'), 350);
+          });
+
+          // Atualizar item na lista de palavras
+          const listItem = wordListEl.querySelector(`[data-word="${matchedWord.text}"]`);
+          if (listItem) {
+            listItem.classList.add('found');
+          }
+
+          updateCounter();
+
+          // Verificar Vitória
+          if (foundCount === activeWords.length) {
+            triggerVictory();
+          }
+        }
+      }
+
+      // Tela de Vitória
+      function triggerVictory() {
+        stopTimer();
+        finalTimeEl.textContent = timerDisplayEl.textContent;
+        finalCountEl.textContent = `${foundCount}/${activeWords.length}`;
+        victoryModalEl.classList.add('active');
+        launchConfetti();
+      }
+
+      // Efeito de Confetes
+      function launchConfetti() {
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const particles = [];
+        const colors = ['#6366f1', '#ec4899', '#10b981', '#f59e0b', '#06b6d4', '#a855f7'];
+
+        for (let i = 0; i < 120; i++) {
+          particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            size: Math.random() * 8 + 4,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            speedY: Math.random() * 3 + 2,
+            speedX: Math.random() * 2 - 1,
+            rotation: Math.random() * 360,
+            rotSpeed: Math.random() * 6 - 3
+          });
+        }
+
+        let animationFrameId;
+        const startTime = Date.now();
+
+        function renderConfetti() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          particles.forEach(p => {
+            p.y += p.speedY;
+            p.x += p.speedX;
+            p.rotation += p.rotSpeed;
+
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate((p.rotation * Math.PI) / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+            ctx.restore();
+          });
+
+          // Continuar por 4 segundos
+          if (Date.now() - startTime < 4000) {
+            animationFrameId = requestAnimationFrame(renderConfetti);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+          }
+        }
+
+        renderConfetti();
+      }
+
+      // Inicialização do Jogo
+      function initGame() {
+        stopTimer();
+        foundCount = 0;
+        victoryModalEl.classList.remove('active');
+        generateBoard();
+        renderGrid();
+        renderWordList();
+        startTimer();
+      }
+
+      // Event Listeners
+      gridEl.addEventListener('pointerdown', handlePointerDown);
+      window.addEventListener('pointermove', handlePointerMove);
+      window.addEventListener('pointerup', handlePointerUp);
+      window.addEventListener('pointercancel', handlePointerUp);
+
+      btnRestartEl.addEventListener('click', initGame);
+      btnModalRestartEl.addEventListener('click', initGame);
+
+      // Redimensionamento da janela limpa confetes residuais se houver
+      window.addEventListener('resize', () => {
+        const canvas = document.getElementById('confetti-canvas');
+        if (canvas) {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+      });
+
+      // Iniciar ao Carregar
+      initGame();
+    })();
+  </script>
+</body>
+</html>
