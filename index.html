@@ -353,6 +353,8 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding-bottom: 12px;
     }
@@ -363,6 +365,20 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+
+    .category-badge {
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      color: #a5b4fc;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
     }
 
     .word-list {
@@ -609,6 +625,7 @@
           <div class="sidebar-title">
             <span>📋</span> Palavras Ocultas
           </div>
+          <div id="category-badge" class="category-badge"></div>
         </div>
         <ul id="word-list" class="word-list"></ul>
       </aside>
@@ -642,16 +659,118 @@
   <!-- Lógica do Jogo (Vanilla JS) -->
   <script>
     (function () {
-      // Banco Variado de Palavras em Português (Sem acentos ou caracteres especiais)
-      const WORD_BANK = [
-        'ALGORITMO', 'COMPUTADOR', 'DESENVOLVEDOR', 'INTERNET', 'PROGRAMACAO',
-        'JAVASCRIPT', 'SOFTWARE', 'HARDWARE', 'SISTEMA', 'MEMORIA',
-        'PROCESSADOR', 'APLICATIVO', 'SEGURANCA', 'NUVEM', 'TECNOLOGIA',
-        'DATABASE', 'NAVEGADOR', 'REQUISICAO', 'VARIAVEL', 'FUNCAO',
-        'ESTRUTURA', 'MATRIZ', 'OBJETO', 'BIBLIOTECA', 'ENGRENAGEM',
-        'SOLUCAO', 'DISPOSITIVO', 'INTELIGENCIA', 'TECLADO', 'MONITOR',
-        'SERVIDOR', 'DIGITAL', 'GRAFICO', 'LOGICA', 'COMANDO',
-        'INTERFACE', 'CONEXAO', 'ARQUITETURA', 'AUTOMACAO', 'CONTEUDO'
+      // 10 Categorias de Palavras em Português (40 palavras por categoria, sem acentos)
+      const WORD_CATEGORIES = [
+        {
+          name: 'Animais',
+          icon: '🐾',
+          words: [
+            'CACHORRO', 'GATO', 'ELEFANTE', 'GIRAFA', 'LEAO', 'TIGRE', 'CORUJA', 'PAPAGAIO',
+            'TUBARAO', 'GOLFINHO', 'BALEIA', 'COBRA', 'JACARE', 'TARTARUGA', 'COELHO', 'RATO',
+            'MACACO', 'CAVALO', 'ZEBRA', 'URSO', 'LOBO', 'RAPOSA', 'PANDA', 'CAMELO',
+            'CANGURU', 'PINGUIM', 'AGUIA', 'FALCAO', 'PAVAO', 'ESQUILO', 'CASTOR', 'HIPOPOTAMO',
+            'RINOCERONTE', 'LEOPARDO', 'GUEPARDO', 'AVESTRUZ', 'MORCEGO', 'CISNE', 'FLAMINGO', 'PANTERA'
+          ]
+        },
+        {
+          name: 'Frutas',
+          icon: '🍎',
+          words: [
+            'BANANA', 'MACA', 'LARANJA', 'MORANGO', 'ABACAXI', 'MELANCIA', 'MELAO', 'UVA',
+            'PERA', 'PESSEGO', 'LIMAO', 'MARACUJA', 'MANGA', 'GOIABA', 'ACEROLA', 'PITANGA',
+            'CAJU', 'CAQUI', 'JABUTICABA', 'ABACATE', 'AMEIXA', 'CEREJA', 'COCO', 'FIGO',
+            'FRAMBOESA', 'AMORA', 'KIWI', 'ROMA', 'CARAMBOLA', 'GRAVIOLA', 'JACA', 'MAMAO',
+            'NECTARINA', 'TANGERINA', 'MANGABA', 'SIRIGUELA', 'CUPUACU', 'UMBU', 'PITAIA', 'TAMARINDO'
+          ]
+        },
+        {
+          name: 'Países',
+          icon: '🌍',
+          words: [
+            'BRASIL', 'ARGENTINA', 'CHILE', 'COLOMBIA', 'PERU', 'URUGUAI', 'PARAGUAI', 'EQUADOR',
+            'BOLIVIA', 'VENEZUELA', 'PORTUGAL', 'ESPANHA', 'FRANCA', 'ITALIA', 'ALEMANHA', 'INGLATERRA',
+            'JAPAO', 'CHINA', 'CANADA', 'MEXICO', 'AUSTRALIA', 'ANGOLA', 'MOCAMBIQUE', 'EGITO',
+            'MARROCOS', 'RUSSIA', 'COREIA', 'INDIA', 'TURQUIA', 'GRECIA', 'SUICA', 'SUECIA',
+            'NORUEGA', 'DINAMARCA', 'FINLANDIA', 'IRLANDA', 'POLONIA', 'HOLANDA', 'BELGICA', 'AUSTRIA'
+          ]
+        },
+        {
+          name: 'Profissões',
+          icon: '💼',
+          words: [
+            'MEDICO', 'PROFESSOR', 'ENGENHEIRO', 'ADVOGADO', 'ENFERMEIRO', 'BOMBEIRO', 'POLICIAL', 'DENTISTA',
+            'ARQUITETO', 'VETERINARIO', 'MOTORISTA', 'COZINHEIRO', 'PADEIRO', 'JORNALISTA', 'CIENTISTA', 'ASTRONAUTA',
+            'FOTOGRAFO', 'DESIGNER', 'ARTISTA', 'MUSICO', 'ATOR', 'PINTOR', 'PILOTO', 'MECANICO',
+            'ELETRICISTA', 'ENCANADOR', 'CARPINTEIRO', 'AGRONOMO', 'ECONOMISTA', 'CONTADOR', 'PSICOLOGO', 'BIOLOGO',
+            'QUIMICO', 'FISICO', 'JUIZ', 'GARCOM', 'BARBEIRO', 'COSTUREIRA', 'SECRETARIA', 'BANCARIO'
+          ]
+        },
+        {
+          name: 'Esportes',
+          icon: '⚽',
+          words: [
+            'FUTEBOL', 'BASQUETE', 'VOLEI', 'TENIS', 'NATACAO', 'ATLETISMO', 'GINASTICA', 'CICLISMO',
+            'BOXE', 'JUDO', 'KARATE', 'SURFE', 'SKATE', 'HANDEBOL', 'HOQUEI', 'REMO',
+            'VELA', 'CANOAGEM', 'ESQUI', 'SNOWBOARD', 'GOLFE', 'CORRIDA', 'MARATONA', 'TRIATLO',
+            'ESGRIMA', 'TIRO', 'RUGBY', 'BEISEBOL', 'CRICKET', 'SQUASH', 'BADMINTON', 'POLO',
+            'TAEKWONDO', 'SUMO', 'CAPOEIRA', 'DANCA', 'ESCALADA', 'PATINACAO', 'PARAPENTE', 'FUTVOLEI'
+          ]
+        },
+        {
+          name: 'Instrumentos Musicais',
+          icon: '🎸',
+          words: [
+            'PIANO', 'VIOLAO', 'GUITARRA', 'BATERIA', 'FLAUTA', 'VIOLINO', 'SAXOFONE', 'TROMPETE',
+            'TECLADO', 'VIOLONCELO', 'BAIXO', 'ACORDEAO', 'HARPA', 'CLARINETE', 'TAMBOR', 'PANDEIRO',
+            'TROMBONE', 'UKULELE', 'ORGAO', 'CAVAQUINHO', 'TRIANGULO', 'XILOFONE', 'FAGOTE', 'OBOE',
+            'TUBA', 'BANJO', 'BANDOLIM', 'MARIMBA', 'CAIXA', 'PRATOS', 'BERIMBAU', 'AGOGO',
+            'RECORECO', 'GONGO', 'TIMPANO', 'ALAUDE', 'CASTANHOLA', 'CUICA', 'SANFONA', 'ZABUMBA'
+          ]
+        },
+        {
+          name: 'Cidades',
+          icon: '🏙️',
+          words: [
+            'SAOPAULO', 'RIODEJANEIRO', 'BRASILIA', 'SALVADOR', 'FORTALEZA', 'BELOHORIZONTE', 'CURITIBA', 'MANAUS',
+            'RECIFE', 'PORTOALEGRE', 'BELEM', 'GOIANIA', 'CAMPINAS', 'SAOLUIS', 'MACEIO', 'NATAL',
+            'TERESINA', 'JOAOPESSOA', 'ARACAJU', 'CUIABA', 'CAMPOGRANDE', 'FLORIANOPOLIS', 'MACAPA', 'PALMAS',
+            'VITORIA', 'RIOBRANCO', 'SANTOS', 'OSASCO', 'NITEROI', 'SOROCABA', 'UBERLANDIA', 'LONDRINA',
+            'MARINGA', 'JOINVILLE', 'BLUMENAU', 'PETROPOLIS', 'GRAMADO', 'BUZIOS', 'OLINDA', 'CASCAVEL'
+          ]
+        },
+        {
+          name: 'Natureza',
+          icon: '🌿',
+          words: [
+            'OCEANO', 'FLORESTA', 'MONTANHA', 'VULCAO', 'DESERTO', 'RIO', 'LAGO', 'CACHOEIRA',
+            'NUVEM', 'CHUVA', 'VENTO', 'TEMPESTADE', 'TROVAO', 'RELAMPAGO', 'NEVE', 'GEADA',
+            'TERREMOTO', 'FURACAO', 'TSUNAMI', 'ARVORE', 'PLANTA', 'FLOR', 'FOLHA', 'RAIZ',
+            'SEMENTE', 'PEDRA', 'ROCHA', 'MINERAL', 'CRISTAL', 'TERRA', 'AREIA', 'SOL',
+            'LUA', 'ESTRELA', 'COMETA', 'METEORO', 'GALAXIA', 'NEBULOSA', 'CAVERNA', 'ILHA'
+          ]
+        },
+        {
+          name: 'Alimentos',
+          icon: '🍕',
+          words: [
+            'ARROZ', 'FEIJAO', 'MACARRAO', 'PIZZA', 'HAMBURGUER', 'LASANHA', 'PASTEL', 'COXINHA',
+            'EMPADA', 'PANQUECA', 'OMELETE', 'SALADA', 'SOPA', 'QUEIJO', 'PRESUNTO', 'FRANGO',
+            'CARNE', 'PEIXE', 'OVO', 'MANTEIGA', 'LEITE', 'IOGURTE', 'PAO', 'BOLO',
+            'TORTA', 'BRIGADEIRO', 'PUDIM', 'GELATINA', 'SORVETE', 'CHOCOLATE', 'BISCOITO', 'PIPOCA',
+            'CERVEJA', 'VINHO', 'SUCO', 'CAFE', 'CHA', 'TEMPERO', 'AZEITE', 'FARINHA'
+          ]
+        },
+        {
+          name: 'Corpo Humano',
+          icon: '🫀',
+          words: [
+            'CORACAO', 'PULMAO', 'FIGADO', 'RINS', 'ESTOMAGO', 'CEREBRO', 'CRANIO', 'ESQUELETO',
+            'OSSO', 'MUSCULO', 'SANGUE', 'VEIA', 'ARTERIA', 'PELE', 'CABELO', 'OLHO',
+            'OUVIDO', 'NARIZ', 'BOCA', 'DENTE', 'LINGUA', 'PESCOCO', 'OMBRO', 'BRACO',
+            'COTOVELO', 'MAO', 'DEDO', 'UNHA', 'PEITO', 'BARRIGA', 'COSTAS', 'QUADRIL',
+            'PERNA', 'JOELHO', 'TORNOZELO', 'PE', 'CALCANHAR', 'NERVOS', 'GARGANTA', 'CILIOS'
+          ]
+        }
       ];
 
       const GRID_SIZE = 20;
@@ -681,6 +800,7 @@
       // Elementos do DOM
       const gridEl = document.getElementById('grid');
       const wordListEl = document.getElementById('word-list');
+      const categoryBadgeEl = document.getElementById('category-badge');
       const timerDisplayEl = document.getElementById('timer-display');
       const foundCounterEl = document.getElementById('found-counter');
       const btnRestartEl = document.getElementById('btn-restart');
@@ -709,9 +829,15 @@
           board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
           activeWords = [];
 
-          // Sortear entre 8 e 12 palavras
+          // Sortear categoria aleatória
+          const currentCategory = WORD_CATEGORIES[Math.floor(Math.random() * WORD_CATEGORIES.length)];
+          if (categoryBadgeEl) {
+            categoryBadgeEl.innerHTML = `<span>${currentCategory.icon}</span> ${currentCategory.name}`;
+          }
+
+          // Sortear entre 8 e 12 palavras da categoria sorteada
           const numWordsToPick = Math.floor(Math.random() * 5) + 8; // 8 a 12
-          const selectedTexts = shuffle(WORD_BANK).slice(0, numWordsToPick);
+          const selectedTexts = shuffle(currentCategory.words).slice(0, numWordsToPick);
 
           // Ordenar por tamanho decrescente para facilitar o encaixe
           selectedTexts.sort((a, b) => b.length - a.length);
